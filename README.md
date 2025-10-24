@@ -1,14 +1,16 @@
 ## Scanly v1 - Website Security Scanner
 Scanly is a fast, free, and user-friendly tool to analyze website security. It checks HTTP headers, SSL/TLS configurations, cookies, and exposed information to identify vulnerabilities and provide actionable recommendations.
-Features
 
-Security Scanning: Analyze website headers, SSL/TLS, cookies, and exposed information in seconds.
-User-Friendly Interface: Clean UI with a hero section for quick scans and detailed results display.
-PDF Reports: Download comprehensive security reports in PDF format using jsPDF.
-SEO Optimized: Configured with metadata for search engines and social media sharing.
-Responsive Design: Built with Tailwind CSS and Nunito Sans font for a polished, mobile-friendly experience.
-Next.js Powered: Leverages server-side rendering and client components for performance and interactivity.
-Theme Support: Light/dark mode toggle with next-themes.
+
+## Features
+
+- Security Scanning: Analyze website headers, SSL/TLS, cookies, and exposed information in seconds.
+- User-Friendly Interface: Clean UI with a hero section for quick scans and detailed results display.
+- PDF Reports: Download comprehensive security reports in PDF format using jsPDF.
+- SEO Optimized: Configured with metadata for search engines and social media sharing.
+- Responsive Design: Built with Tailwind CSS and Nunito Sans font for a polished, mobile-friendly experience.
+- Next.js Powered: Leverages server-side rendering and client components for performance and interactivity.
+- Theme Support: Light/dark mode toggle with next-themes.
 
 ## Tech Stack
 
@@ -46,14 +48,17 @@ npm run build
 npm run start
 
 
+## 🧠 Version 2 (Planned)
+- Scan dependencies (npm audit / Snyk-like check)
+- Detect outdated libraries
+- Find secrets in code (e.g., API keys)
+- Repository scanning support
 
-## Usage
-
-Homepage:
-
-Enter a website URL (e.g., https://example.com) in the Hero section.
-Click "Scan Now" to navigate to the Scanner section and initiate the scan.
-Alternatively, use the Scanner section directly to input a URL and run a scan.
+## ⚙️ How It Works
+1. Enter a URL into the input box.
+2. The frontend sends a request to your API route.
+3. The backend fetches the headers and runs checks.
+4. Results are displayed instantly.
 
 
 ## Results:
