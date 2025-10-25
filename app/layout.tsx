@@ -30,11 +30,11 @@ export const metadata: Metadata = {
     title: "Scanly | Website Security Scanner",
     description:
       "Instantly scan your website for security issues with Scanly. Analyze headers, SSL, and cookies to stay secure.",
-    url: "https://scanly-devmaxzi.vercel.app/", // Replace with your actual domain
+    url: "https://scanly-devmaxzi.vercel.app/",
     type: "website",
     images: [
       {
-        url: "/og-logo.png", // Replace with your actual domain
+        url: "https://scanly-devmaxzi.vercel.app/og-logo.png",
         width: 1200,
         height: 630,
         alt: "Scanly Security Scanner",
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     title: "Scanly | Website Security Scanner",
     description:
       "Scan your website for security vulnerabilities with Scanly. Fast, free, and secure.",
-    images: ["/og-logo.png"],
+    images: ["https://scanly-devmaxzi.vercel.app/og-logo.png"],
   },
   robots: {
     index: true,

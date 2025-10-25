@@ -16,7 +16,7 @@ const Logo = () => {
           priority
         />
         <Image
-          src="/Logo-Dark.png"
+          src="/Logo-dark.png"
           alt="logo"
           width={150}
           height={200}
