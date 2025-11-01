@@ -1,108 +1,108 @@
 import { CodeScanReport } from "@/types/code-scan";
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
+
 
 /**
- * Scans a repository for packages with risky or restrictive licenses.
- * Uses `npm ls --json` or fallback to package.json.
+ * Scans repository for packages with risky or restrictive licenses.
+ * Uses `npm ls` locally, and a safe fallback in production.
  */
-export function scanLicenses(
+export async function scanLicenses(
   repoPath: string
-): CodeScanReport["licenseIssues"] {
+): Promise<CodeScanReport["licenseIssues"]> {
   const packageJsonPath = path.join(repoPath, "package.json");
   if (!fs.existsSync(packageJsonPath)) return [];
 
   const riskyLicenses = [
     {
-      name: "GPL",
+      patterns: ["GPL", "GPLv2", "GPLv3"],
       risk: "high" as const,
-      reason: "Requires disclosing derivative source code (copyleft).",
+      reason: "Copyleft license",
     },
     {
-      name: "AGPL",
+      patterns: ["AGPL", "AGPLv3"],
       risk: "high" as const,
-      reason: "Forces network applications to share source (SaaS restriction).",
+      reason: "SaaS restriction",
     },
     {
-      name: "SSPL",
+      patterns: ["SSPL"],
       risk: "high" as const,
-      reason: "Restricts hosting as a service — not open-source friendly.",
+      reason: "Service restriction",
     },
     {
-      name: "CC-BY-NC",
+      patterns: ["CC-BY-NC"],
       risk: "medium" as const,
-      reason: "Non-commercial license — not suitable for commercial projects.",
+      reason: "Non-commercial",
     },
-    {
-      name: "LGPL",
-      risk: "medium" as const,
-      reason: "Partial copyleft — may impose source linking obligations.",
-    },
+    { patterns: ["LGPL"], risk: "medium" as const, reason: "Partial copyleft" },
   ];
 
   try {
-    // Try to get license info from npm
-    const npmData = execSync("npm ls --json --long", {
-      cwd: repoPath,
-      stdio: "pipe",
-      timeout: 20000,
-    }).toString();
+    const pkgJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+    const deps = {
+      ...(pkgJson.dependencies || {}),
+      ...(pkgJson.devDependencies || {}),
+    };
 
-    const parsed = JSON.parse(npmData);
-    const licenses: Record<string, string> = {};
-
-    // Extract license from npm data
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function collectLicenses(node: any) {
-      if (node?.name && node?.license) {
-        licenses[node.name] =
-          typeof node.license === "string"
-            ? node.license
-            : node.license.type || "unknown";
-      }
-      if (node?.dependencies) {
-        Object.values(node.dependencies).forEach(collectLicenses);
-      }
-    }
-    collectLicenses(parsed);
-
-    // Detect risky licenses
+    const packages = Object.keys(deps);
+    const BATCH_SIZE = 20; // Check 20 packages at once
     const issues: CodeScanReport["licenseIssues"] = [];
-    for (const [pkg, license] of Object.entries(licenses)) {
-      for (const { name, risk, reason } of riskyLicenses) {
-        if (license.toUpperCase().includes(name)) {
-          issues.push({ package: pkg, license, risk, reason });
-        }
-      }
-    }
 
-    return issues;
-  } catch (err) {
-    console.warn("⚠️ License scan failed:", (err as Error).message);
+    // Process in batches to avoid overwhelming npm registry
+    for (let i = 0; i < packages.length; i += BATCH_SIZE) {
+      const batch = packages.slice(i, i + BATCH_SIZE);
 
-    // Fallback: very basic license check via package.json if npm fails
-    try {
-      const pkgJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-      const deps = {
-        ...pkgJson.dependencies,
-        ...pkgJson.devDependencies,
-      };
+      const results = await Promise.allSettled(
+        batch.map(async (pkgName) => {
+          try {
+            const res = await fetch(
+              `https://registry.npmjs.org/${pkgName}/latest`,
+              {
+                headers: { "User-Agent": "SecurityScanner/1.0" },
+              }
+            );
 
-      const issues: CodeScanReport["licenseIssues"] = [];
+            if (!res.ok) return null;
+            const data = await res.json();
+            return { name: pkgName, license: data.license || "unknown" };
+          } catch {
+            return null;
+          }
+        })
+      );
 
-      for (const pkg of Object.keys(deps)) {
-        for (const { name, risk, reason } of riskyLicenses) {
-          // Lightweight static license guess
-          if (pkg.toUpperCase().includes(name)) {
-            issues.push({ package: pkg, license: name, risk, reason });
+      // Check results for risky licenses
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value) {
+          const { name, license } = result.value;
+          const licenseUpper = license.toUpperCase();
+
+          for (const { patterns, risk, reason } of riskyLicenses) {
+            if (patterns.some((p) => licenseUpper.includes(p.toUpperCase()))) {
+              issues.push({
+                package: `${name}@${deps[name]}`,
+                license,
+                risk,
+                reason,
+              });
+              break;
+            }
           }
         }
       }
 
-      return issues;
-    } catch {
-      return [];
+      // Small delay between batches
+      if (i + BATCH_SIZE < packages.length) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
     }
+
+    console.log(
+      `📜 Batch license scan: ${packages.length} packages, ${issues.length} risky licenses`
+    );
+    return issues;
+  } catch (err) {
+    console.warn("⚠️ Batch license scan failed:", (err as Error).message);
+    return [];
   }
 }

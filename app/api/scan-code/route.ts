@@ -1,4 +1,9 @@
-import { scanDependencies } from "@/lib/scanners/dependencies";
+// ============== route.ts ==============
+import {
+  checkOutdatedPackages,
+  scanDependencies,
+  scanVulnerabilitiesNpmAudit,
+} from "@/lib/scanners/dependencies";
 import { scanDocker } from "@/lib/scanners/docker";
 import { scanInsecureFunctions } from "@/lib/scanners/insecure";
 import { scanLicenses } from "@/lib/scanners/licenses";
@@ -35,7 +40,9 @@ export async function POST(req: Request) {
     const repoPath = await cloneRepo(repoUrl, safeBranch);
 
     try {
+      // 🔧 FIX 1: Separate vulnerabilities from outdated packages
       const [
+        vulnerabilities,
         outdatedPackages,
         hardcodedSecrets,
         insecureFunctions,
@@ -43,7 +50,8 @@ export async function POST(req: Request) {
         dockerIssues,
         sastFindings,
       ] = await Promise.all([
-        scanDependencies(repoPath),
+        scanVulnerabilitiesNpmAudit(repoPath), // Returns vulnerabilities
+        checkOutdatedPackages(repoPath), // Returns outdated packages
         scanForSecrets(repoPath),
         scanInsecureFunctions(repoPath),
         scanLicenses(repoPath),
@@ -51,10 +59,13 @@ export async function POST(req: Request) {
         runSAST(repoPath),
       ]);
 
+      // 🔧 FIX 2: Combine vulnerabilities and outdated packages
+      const allPackageIssues = [...vulnerabilities, ...outdatedPackages];
+
       const report: Omit<CodeScanReport, "summary"> = {
         repoUrl,
         scanDate: new Date().toISOString(),
-        outdatedPackages,
+        outdatedPackages: allPackageIssues, 
         hardcodedSecrets,
         insecureFunctions,
         vulnerableFrameworks: [],
@@ -66,33 +77,74 @@ export async function POST(req: Request) {
       };
 
       const securityScore = calculateScore(report);
+
+      // 🔧 FIX 3: Better summary calculation
       const summary = {
         totalIssues:
-          outdatedPackages.length +
+          allPackageIssues.length +
           hardcodedSecrets.length +
           insecureFunctions.length +
           sastFindings.length +
           dockerIssues.length +
           licenseIssues.length,
-        critical: outdatedPackages.filter((p) => p.severity === "critical")
+        critical: allPackageIssues.filter((p) => p.severity === "critical")
           .length,
         high:
-          outdatedPackages.filter((p) => p.severity === "high").length +
+          allPackageIssues.filter((p) => p.severity === "high").length +
           hardcodedSecrets.length +
-          licenseIssues.filter((l) => l.risk === "high").length,
+          licenseIssues.filter((l) => l.risk === "high").length +
+          dockerIssues.filter((d) => d.severity === "high").length,
         medium:
+          allPackageIssues.filter((p) => p.severity === "medium").length +
           insecureFunctions.length +
-          licenseIssues.filter((l) => l.risk === "medium").length,
-        low: dockerIssues.filter((d) => d.severity === "low").length,
+          sastFindings.filter((s) => s.severity === "medium").length +
+          licenseIssues.filter((l) => l.risk === "medium").length +
+          dockerIssues.filter((d) => d.severity === "medium").length,
+        low:
+          allPackageIssues.filter((p) => p.severity === "low").length +
+          sastFindings.filter((s) => s.severity === "low").length +
+          dockerIssues.filter((d) => d.severity === "low").length,
         securityScore,
       };
 
+      // 🔧 FIX 4: More detailed recommendations
       const recommendations = [
-        hardcodedSecrets.length > 0 && "Remove hardcoded secrets",
-        outdatedPackages.length > 0 && "Update dependencies",
-        sastFindings.length > 0 && "Fix injection vulnerabilities",
-        insecureFunctions.length > 0 && "Use safer functions",
-        licenseIssues.length > 0 && "Review risky licenses",
+        hardcodedSecrets.length > 0 &&
+          `🔐 Remove ${hardcodedSecrets.length} hardcoded secret${
+            hardcodedSecrets.length > 1 ? "s" : ""
+          } immediately`,
+
+        vulnerabilities.length > 0 &&
+          `⚠️ Fix ${vulnerabilities.length} vulnerable package${
+            vulnerabilities.length > 1 ? "s" : ""
+          } with known CVEs`,
+
+        outdatedPackages.length > 0 &&
+          `📦 Update ${outdatedPackages.length} outdated package${
+            outdatedPackages.length > 1 ? "s" : ""
+          } to latest versions`,
+
+        sastFindings.length > 0 &&
+          `🛡️ Address ${sastFindings.length} code security issue${
+            sastFindings.length > 1 ? "s" : ""
+          } (injection, XSS, etc.)`,
+
+        insecureFunctions.length > 0 &&
+          `⚡ Replace ${insecureFunctions.length} insecure function${
+            insecureFunctions.length > 1 ? "s" : ""
+          } with safer alternatives`,
+
+        licenseIssues.length > 0 &&
+          `📜 Review ${licenseIssues.length} package${
+            licenseIssues.length > 1 ? "s" : ""
+          } with risky licenses (${
+            licenseIssues.filter((l) => l.risk === "high").length
+          } high risk)`,
+
+        dockerIssues.length > 0 &&
+          `🐳 Fix ${dockerIssues.length} Docker security issue${
+            dockerIssues.length > 1 ? "s" : ""
+          }`,
       ].filter(Boolean) as string[];
 
       return NextResponse.json({ ...report, summary, recommendations });

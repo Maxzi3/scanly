@@ -4,6 +4,7 @@ export type OutdatedPackage = {
   latestVersion: string;
   severity: "critical" | "high" | "medium" | "low";
   cve?: string;
+  description?: string;
 };
 
 export type HardcodedSecret = {
@@ -52,7 +53,14 @@ export type SASTFinding = {
     | "xss"
     | "path_traversal"
     | "command_injection"
-    | "xxe";
+    | "xxe"
+    | "insecure_deserialization"
+    | "code_injection"
+    | "open_redirect"
+    | "ssrf"
+    | "weak_crypto"
+    | "hardcoded_secret";
+  severity: "critical" | "high" | "medium" | "low";
   code: string;
   description: string;
 };
