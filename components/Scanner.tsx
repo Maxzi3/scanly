@@ -85,7 +85,7 @@ export default function Scanner() {
         <div className="space-y-6">
           <div className="flex gap-3 flex-col sm:flex-row">
             <Input
-            className="p-5"
+            className="py-5"
               type="url"
               placeholder="https://example.com"
               value={url}

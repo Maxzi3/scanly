@@ -74,8 +74,8 @@ const Results = ({ data }: Props) => {
         </Button>
       </div>
 
-      <Card className="p-6 mb-8 bg-card border-border">
-        <div className="flex flex-wrap gap-8 justify-center items-center">
+      <div className="md:p-2 mb-8 bg-card border-border">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {summary.map((item, i) => (
             <div key={i} className="flex items-center gap-3">
               {item.label === "Security Score" ? (
@@ -97,7 +97,7 @@ const Results = ({ data }: Props) => {
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
       {exposed.redirectedToHttps && (
         <Card className="p-4 mb-6 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700">

@@ -1,4 +1,4 @@
-import { Shield, Lock, Cookie } from "lucide-react";
+import { Shield, Lock, Cookie, Code2, Gauge, Bug } from "lucide-react";
 import { Card } from "./ui/card";
 
 const features = [
@@ -19,6 +19,24 @@ const features = [
     title: "Cookie Safety",
     description:
       "Verify Secure and HttpOnly flags on cookies to prevent session hijacking and XSS attacks.",
+  },
+  {
+    icon: Code2,
+    title: "Dependency Audit",
+    description:
+      "Scan project dependencies for known vulnerabilities and outdated packages using npm audit.",
+  },
+  {
+    icon: Bug,
+    title: "Vulnerability Detection",
+    description:
+      "Identify potential security flaws or exposed configurations before they become critical threats.",
+  },
+  {
+    icon: Gauge,
+    title: "Performance & Health Insights",
+    description:
+      "Get insights into website responsiveness, certificate health, and best practices to improve security posture.",
   },
 ];
 

@@ -1,13 +1,15 @@
+import FAQSEction from "@/components/FaqSection";
 import Features from "@/components/Features";
 import Hero from "@/components/Hero";
-import Scanner from "@/components/Scanner";
+import ScannerTabs from "@/components/ScannerTab";
 
 export default function Home() {
   return (
     <div>
       <Hero />
       <Features />
-      <Scanner />
+      <ScannerTabs />
+      <FAQSEction/>
     </div>
   );
 }
