@@ -1,12 +1,9 @@
-// ============== route.ts ==============
 import {
   checkOutdatedPackages,
-  scanDependencies,
-  scanVulnerabilitiesNpmAudit,
+  scanLicenses,
 } from "@/lib/scanners/dependencies";
 import { scanDocker } from "@/lib/scanners/docker";
 import { scanInsecureFunctions } from "@/lib/scanners/insecure";
-import { scanLicenses } from "@/lib/scanners/licenses";
 import { runSAST } from "@/lib/scanners/sast";
 import { calculateScore } from "@/lib/scanners/score";
 import { scanForSecrets } from "@/lib/scanners/secrets";
@@ -35,14 +32,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Ensure branch is always a clean, valid string
+    // Clean and validate branch name
     const safeBranch = (branch ?? "main").replace(/[^\w\-/.]/g, "");
     const repoPath = await cloneRepo(repoUrl, safeBranch);
 
     try {
-      // 🔧 FIX 1: Separate vulnerabilities from outdated packages
+      // Run all scans in parallel - simple and clean
       const [
-        vulnerabilities,
         outdatedPackages,
         hardcodedSecrets,
         insecureFunctions,
@@ -50,8 +46,7 @@ export async function POST(req: Request) {
         dockerIssues,
         sastFindings,
       ] = await Promise.all([
-        scanVulnerabilitiesNpmAudit(repoPath), // Returns vulnerabilities
-        checkOutdatedPackages(repoPath), // Returns outdated packages
+        checkOutdatedPackages(repoPath), 
         scanForSecrets(repoPath),
         scanInsecureFunctions(repoPath),
         scanLicenses(repoPath),
@@ -59,13 +54,10 @@ export async function POST(req: Request) {
         runSAST(repoPath),
       ]);
 
-      // 🔧 FIX 2: Combine vulnerabilities and outdated packages
-      const allPackageIssues = [...vulnerabilities, ...outdatedPackages];
-
       const report: Omit<CodeScanReport, "summary"> = {
         repoUrl,
         scanDate: new Date().toISOString(),
-        outdatedPackages: allPackageIssues, 
+        outdatedPackages,
         hardcodedSecrets,
         insecureFunctions,
         vulnerableFrameworks: [],
@@ -78,71 +70,78 @@ export async function POST(req: Request) {
 
       const securityScore = calculateScore(report);
 
-      // 🔧 FIX 3: Better summary calculation
+      // Calculate summary
       const summary = {
         totalIssues:
-          allPackageIssues.length +
+          outdatedPackages.length +
           hardcodedSecrets.length +
           insecureFunctions.length +
           sastFindings.length +
           dockerIssues.length +
           licenseIssues.length,
-        critical: allPackageIssues.filter((p) => p.severity === "critical")
-          .length,
+        critical:
+          outdatedPackages.filter((p) => p.severity === "critical").length +
+          sastFindings.filter((s) => s.severity === "critical").length,
         high:
-          allPackageIssues.filter((p) => p.severity === "high").length +
+          outdatedPackages.filter((p) => p.severity === "high").length +
           hardcodedSecrets.length +
           licenseIssues.filter((l) => l.risk === "high").length +
+          sastFindings.filter((s) => s.severity === "high").length +
           dockerIssues.filter((d) => d.severity === "high").length,
         medium:
-          allPackageIssues.filter((p) => p.severity === "medium").length +
+          outdatedPackages.filter((p) => p.severity === "medium").length +
           insecureFunctions.length +
-          sastFindings.filter((s) => s.severity === "medium").length +
           licenseIssues.filter((l) => l.risk === "medium").length +
+          sastFindings.filter((s) => s.severity === "medium").length +
           dockerIssues.filter((d) => d.severity === "medium").length,
         low:
-          allPackageIssues.filter((p) => p.severity === "low").length +
+          outdatedPackages.filter((p) => p.severity === "low").length +
           sastFindings.filter((s) => s.severity === "low").length +
           dockerIssues.filter((d) => d.severity === "low").length,
         securityScore,
       };
 
-      // 🔧 FIX 4: More detailed recommendations
+      // Generate recommendations
       const recommendations = [
         hardcodedSecrets.length > 0 &&
           `🔐 Remove ${hardcodedSecrets.length} hardcoded secret${
             hardcodedSecrets.length > 1 ? "s" : ""
-          } immediately`,
+          }`,
 
-        vulnerabilities.length > 0 &&
-          `⚠️ Fix ${vulnerabilities.length} vulnerable package${
-            vulnerabilities.length > 1 ? "s" : ""
-          } with known CVEs`,
-
-        outdatedPackages.length > 0 &&
-          `📦 Update ${outdatedPackages.length} outdated package${
-            outdatedPackages.length > 1 ? "s" : ""
-          } to latest versions`,
+        outdatedPackages.filter(
+          (p) => p.severity === "critical" || p.severity === "high"
+        ).length > 0 &&
+          `⚠️ Update ${
+            outdatedPackages.filter(
+              (p) => p.severity === "critical" || p.severity === "high"
+            ).length
+          } critically outdated package${
+            outdatedPackages.filter(
+              (p) => p.severity === "critical" || p.severity === "high"
+            ).length > 1
+              ? "s"
+              : ""
+          }`,
 
         sastFindings.length > 0 &&
-          `🛡️ Address ${sastFindings.length} code security issue${
+          `🛡️ Fix ${sastFindings.length} security issue${
             sastFindings.length > 1 ? "s" : ""
-          } (injection, XSS, etc.)`,
+          } in code`,
 
         insecureFunctions.length > 0 &&
           `⚡ Replace ${insecureFunctions.length} insecure function${
             insecureFunctions.length > 1 ? "s" : ""
-          } with safer alternatives`,
+          }`,
 
         licenseIssues.length > 0 &&
-          `📜 Review ${licenseIssues.length} package${
+          `📜 Review ${licenseIssues.length} license issue${
             licenseIssues.length > 1 ? "s" : ""
-          } with risky licenses (${
+          } (${
             licenseIssues.filter((l) => l.risk === "high").length
           } high risk)`,
 
         dockerIssues.length > 0 &&
-          `🐳 Fix ${dockerIssues.length} Docker security issue${
+          `🐳 Fix ${dockerIssues.length} Docker issue${
             dockerIssues.length > 1 ? "s" : ""
           }`,
       ].filter(Boolean) as string[];
