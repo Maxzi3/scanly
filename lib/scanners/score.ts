@@ -18,7 +18,7 @@ export function calculateScore(
 
   let deductions = 0;
 
-  // 🧩 Count issues once to avoid repeated filtering
+  // Count issues once to avoid repeated filtering
   let criticalCount = 0;
   let highCount = 0;
   for (const pkg of report.outdatedPackages) {
@@ -33,7 +33,7 @@ export function calculateScore(
     (d) => d.severity === "high"
   ).length;
 
-  // 💯 Calculate weighted deductions
+  //  Calculate weighted deductions
   deductions += criticalCount * weights.criticalVuln;
   deductions += highCount * weights.highVuln;
   deductions += report.hardcodedSecrets.length * weights.secret;
@@ -42,7 +42,7 @@ export function calculateScore(
   deductions += highDockerCount * weights.highDocker;
   deductions += report.licenseIssues.length * weights.license;
 
-  // 🧮 Compute score and clamp between 0 and 100
+  //  Compute score and clamp between 0 and 100
   const rawScore = 100 - deductions;
   const score = Math.max(0, Math.min(100, Math.round(rawScore)));
 

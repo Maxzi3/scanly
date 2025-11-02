@@ -12,6 +12,7 @@ export async function downloadRepo(
   const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!match) throw new Error("Invalid GitHub URL");
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, owner, repo] = match;
   const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${branch}`;
 

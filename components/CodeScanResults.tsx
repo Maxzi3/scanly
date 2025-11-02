@@ -183,7 +183,7 @@ const CodeScanResults = () => {
 
       {/* Results */}
       {isScanning ? (
-        <Card className="bg-card border-border p-6">
+        <Card className="bg-card border-border">
           <CardContent className="text-center">
             <div className="flex justify-center items-center gap-2 text-muted-foreground">
               <span className="animate-spin">⚡</span>

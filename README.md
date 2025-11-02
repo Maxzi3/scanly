@@ -1,143 +1,185 @@
-## Scanly v1 - Website Security Scanner
-Scanly is a fast, free, and user-friendly tool to analyze website security. It checks HTTP headers, SSL/TLS configurations, cookies, and exposed information to identify vulnerabilities and provide actionable recommendations.
+# Scanly API
+
+## Overview
+Scanly is a fast, free, and user-friendly tool to analyze website security. It checks HTTP headers, SSL/TLS configurations, cookies, scanning public GitHub repositories for vulnerabilities, hardcoded secrets, outdated dependencies and exposed information to identify vulnerabilities and provide actionable recommendations.
 
 
 ## Features
+- **Next.js**: Full-stack framework for building the API endpoints and server-side logic.
+- **TypeScript**: Provides static typing for robust and maintainable code.
+- **ssl-checker**: Verifies the validity and expiration of SSL/TLS certificates.
+- **adm-zip**: Downloads and extracts GitHub repositories from a ZIP archive for code analysis.
+- **Rate Limiting**: Implements in-memory rate limiting to prevent API abuse.
 
-- Security Scanning: Analyze website headers, SSL/TLS, cookies, and exposed information in seconds.
-- User-Friendly Interface: Clean UI with a hero section for quick scans and detailed results display.
-- PDF Reports: Download comprehensive security reports in PDF format using jsPDF.
-- SEO Optimized: Configured with metadata for search engines and social media sharing.
-- Responsive Design: Built with Tailwind CSS and Nunito Sans font for a polished, mobile-friendly experience.
-- Next.js Powered: Leverages server-side rendering and client components for performance and interactivity.
-- Theme Support: Light/dark mode toggle with next-themes.
+## Getting Started
+### Installation
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/Maxzi3/scanly.git
+    ```
+2.  Navigate to the project directory:
+    ```bash
+    cd scanly
+    ```
+3.  Install the required dependencies:
+    ```bash
+    npm install
+    ```
+4.  Start the development server:
+    ```bash
+    npm run dev
+    ```
+    The application will be available at `http://localhost:3000`.
 
-## Tech Stack
+### Environment Variables
+This project does not require any environment variables for its core functionality to run.
 
-Framework: Next.js 16 (App Router)
-Styling: Tailwind CSS
-Fonts: Nunito Sans (via next/font/google)
-Components: Custom UI components (ui/button, ui/card, etc.)
-Icons: Lucide React
-Libraries: sonner (toasts), jsPDF (PDF reports), next-themes (theme switching)
-TypeScript: Type-safe with ScanReport interface
+## API Documentation
+### Base URL
+`http://localhost:3000/api`
 
-## Installation
+### Endpoints
+#### POST /api/scan
+Scans a given website URL for security misconfigurations, including headers, TLS certificate, and cookies.
 
-Clone the Repository:
-git clone https://github.com/yourusername/scanly.git
-cd scanly
-
-
-Install Dependencies:
-npm install
-
-
-Set Up Environment:Create a .env.local file in the root directory and add any necessary environment variables (e.g., API endpoints if applicable):
-# Example
-NEXT_PUBLIC_API_URL=https://api.yourwebsite.com
-
-
-Run the Development Server:
-npm run dev
-
-Open http://localhost:3000 in your browser.
-
-Build for Production:
-npm run build
-npm run start
-
-
-## 🧠 Version 2 (Planned)
-- Scan dependencies (npm audit / Snyk-like check)
-- Detect outdated libraries
-- Find secrets in code (e.g., API keys)
-- Repository scanning support
-
-## ⚙️ How It Works
-1. Enter a URL into the input box.
-2. The frontend sends a request to your API route.
-3. The backend fetches the headers and runs checks.
-4. Results are displayed instantly.
-
-
-## Results:
-
-View a detailed breakdown of security headers, SSL/TLS, cookies, and exposed information.
-Check the security score and recommendations for improving your website’s security.
-
-
-## Download Report:
-
-Click the "Download Report" button in the Results section to generate a PDF report with scan details.
-
-
-
-## Project Structure
-scanly/
-├── app/
-│   ├── not-found.tsx        # Custom 404 page
-│   ├── globals.css          # Global styles with Tailwind CSS
-│   ├── layout.tsx           # Root layout with metadata and theme
-│   ├── page.tsx             # Homepage with Hero, Features, Scanner
-├── components/
-│   ├── Hero.tsx             # URL input and scan trigger
-│   ├── Scanner.tsx          # Handles API calls and results display
-│   ├── Results.tsx          # Renders scan results and recommendations
-│   ├── Navbar.tsx           # Navigation with theme toggle
-│   ├── Footer.tsx           # Footer component
-│   ├── Logo.tsx             # Logo component
-│   ├── ui/                  # Reusable UI components (Button, Card, etc.)
-├── utils/
-│   ├── downloadReport.ts    # PDF report generation with jsPDF
-├── types/
-│   ├── scan.ts              # ScanReport TypeScript interface
-├── public/
-│   ├── og-logo.png          # OpenGraph/Twitter image
-
-## API Integration
-The Scanner component makes a POST request to /api/scan with the URL to analyze. Ensure your backend API is set up to handle this request and return a ScanReport object with the following structure:
-interface ScanReport {
-  url: string;
-  securityScore: number;
-  headers: Record<string, boolean>;
-  tls: {
-    valid: boolean;
-    issuer?: string;
-    validFrom?: string;
-    validTo?: string;
-    daysRemaining?: number;
-    error?: string;
-  };
-  cookies: Array<{
-    name: string;
-    httpOnly: boolean;
-    secure: boolean;
-    sameSite: string;
-  }>;
-  exposed: {
-    serverHeader: string;
-    robotsTxt: string[];
-    sitemapExists: boolean;
-    directoryListing: boolean;
-    redirectedToHttps?: boolean;
-    finalUrl?: string;
-  };
+**Request**:
+```json
+{
+  "url": "https://example.com"
 }
+```
+- `url` (string, required): The full URL of the website to scan. Must start with `http://` or `https://`.
 
-## SEO and Social Sharing
+**Response**:
+```json
+{
+  "url": "https://example.com",
+  "headers": {
+    "csp": true,
+    "xFrameOptions": true,
+    "xContentTypeOptions": true,
+    "hsts": true,
+    "referrerPolicy": false,
+    "permissionsPolicy": false,
+    "xXssProtection": true,
+    "crossOriginEmbedderPolicy": false,
+    "crossOriginOpenerPolicy": false,
+    "crossOriginResourcePolicy": false
+  },
+  "tls": {
+    "valid": true,
+    "daysRemaining": 89,
+    "validFrom": "2024-05-22T00:00:00.000Z",
+    "validTo": "2024-08-20T23:59:59.000Z",
+    "issuer": "Let's Encrypt"
+  },
+  "exposed": {
+    "serverHeader": "Not disclosed",
+    "robotsTxt": ["User-agent: *", "Disallow: /"],
+    "sitemapExists": true,
+    "directoryListing": false,
+    "redirectedToHttps": true,
+    "finalUrl": "https://example.com/"
+  },
+  "cookies": [
+    {
+      "name": "session_id",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Strict"
+    }
+  ],
+  "securityScore": 95
+}
+```
 
-Metadata: Configured in app/layout.tsx with OpenGraph and Twitter tags for optimal sharing.
-Images: Place a 1200x630px og-logo.png in /public for social media previews.
+**Errors**:
+- `400 Bad Request`: Invalid URL format provided.
+- `429 Too Many Requests`: Rate limit exceeded.
+- `500 Internal Server Error`: The target website could not be reached or an unexpected error occurred during the scan.
 
-## Contributing
-Contributions are welcome! Please:
+#### POST /api/scan-code
+Scans a public GitHub repository for security vulnerabilities, including outdated packages, hardcoded secrets, insecure functions, and SAST findings.
 
-Fork the repository.
-Create a feature branch (git checkout -b feature/your-feature).
-Commit your changes (git commit -m "Add your feature").
-Push to the branch (git push origin feature/your-feature).
-Open a pull request.
+**Request**:
+```json
+{
+  "repoUrl": "https://github.com/username/repository",
+  "branch": "main"
+}
+```
+- `repoUrl` (string, required): The full URL of the public GitHub repository.
+- `branch` (string, optional): The name of the branch to scan. Defaults to `main`.
 
-## License
-MIT License. See LICENSE for details.
+**Response**:
+```json
+{
+  "repoUrl": "https://github.com/username/repository",
+  "scanDate": "2024-05-25T12:00:00.000Z",
+  "summary": {
+    "totalIssues": 5,
+    "critical": 1,
+    "high": 2,
+    "medium": 1,
+    "low": 1,
+    "securityScore": 75
+  },
+  "outdatedPackages": [
+    {
+      "name": "express",
+      "currentVersion": "4.17.1",
+      "latestVersion": "4.19.2",
+      "severity": "high",
+      "cve": "CVE-2022-24999"
+    }
+  ],
+  "hardcodedSecrets": [
+    {
+      "file": "src/config.js",
+      "line": 10,
+      "type": "api_key",
+      "preview": "const API_KEY = 'sk_live_...';"
+    }
+  ],
+  "insecureFunctions": [
+    {
+      "file": "src/utils.js",
+      "line": 5,
+      "function": "eval",
+      "risk": "Code Injection",
+      "suggestion": "Avoid using eval(). Use safer alternatives like JSON.parse for data parsing."
+    }
+  ],
+  "licenseIssues": [
+    {
+      "package": "some-package",
+      "license": "AGPL-3.0",
+      "risk": "high",
+      "reason": "Restrictive copyleft license"
+    }
+  ],
+  "dockerIssues": [],
+  "sastFindings": [
+    {
+      "file": "src/db.js",
+      "line": 25,
+      "type": "sql_injection",
+      "severity": "critical",
+      "code": "db.query(`SELECT * FROM users WHERE id = ${userId}`)",
+      "description": "Direct user input is used in an SQL query, leading to potential SQL injection."
+    }
+  ],
+  "recommendations": [
+    "🔐 Remove 1 hardcoded secret",
+    "⚠️ Update 1 critically outdated package",
+    "🛡️ Fix 1 security issue in code",
+    "⚡ Replace 1 insecure function",
+    "📜 Review 1 license issue (1 high risk)"
+  ]
+}
+```
+
+**Errors**:
+- `400 Bad Request`: Invalid GitHub URL format provided.
+- `429 Too Many Requests`: Rate limit exceeded.
+- `500 Internal Server Error`: Failed to download or scan the repository. This may occur if the repository or branch does not exist.
