@@ -8,8 +8,8 @@ import { runSAST } from "@/lib/scanners/sast";
 import { calculateScore } from "@/lib/scanners/score";
 import { scanForSecrets } from "@/lib/scanners/secrets";
 import { CodeScanRequest, CodeScanReport } from "@/types/code-scan";
+import { downloadRepo } from "@/utils/downloadRepo";
 import { cleanupDir } from "@/utils/fileSystem";
-import { cloneRepo } from "@/utils/gitClone";
 import { checkRateLimit } from "@/utils/rateLimit";
 import { NextResponse } from "next/server";
 
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
     // Clean and validate branch name
     const safeBranch = (branch ?? "main").replace(/[^\w\-/.]/g, "");
-    const repoPath = await cloneRepo(repoUrl, safeBranch);
+  const repoPath = await downloadRepo(repoUrl, safeBranch);
 
     try {
       // Run all scans in parallel - simple and clean
